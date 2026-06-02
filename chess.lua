@@ -1,58 +1,70 @@
--- MozerHub v3 - Chess Pro Edition
+-- MozerHub v4 - Chess Pro (Smart AI + Timers)
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
-local LeftSidebar = Instance.new("Frame")
 local RightContent = Instance.new("Frame")
-local MinimizedFrame = Instance.new("TextButton")
+local LeftSidebar = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
-local CloseBtn = Instance.new("TextButton")
 
--- Chess Logic Variables
+-- Game Variables
 local Board = {}
+local Squares = {}
 local SelectedSquare = nil
-local ValidMoves = {}
 local PlayerColor = "White"
 local Turn = "White"
 local GameActive = false
+local WhiteTime = 600 -- 10 دقائق
+local BlackTime = 600
+
+-- Piece Values (for Smart AI)
+local Values = { P = 10, N = 30, B = 30, R = 50, Q = 90, K = 900 }
 
 -- UI Setup
-ScreenGui.Name = "MozerChess"
+ScreenGui.Name = "MozerChessPro"
 ScreenGui.Parent = game.CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-MainFrame.Size = UDim2.new(0, 540, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -270, 0.5, -190)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.Size = UDim2.new(0, 560, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -280, 0.5, -200)
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
 
 LeftSidebar.Parent = MainFrame
-LeftSidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-LeftSidebar.Size = UDim2.new(0, 140, 1, 0)
+LeftSidebar.Size = UDim2.new(0, 150, 1, 0)
+LeftSidebar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Instance.new("UICorner", LeftSidebar).CornerRadius = UDim.new(0, 15)
 
-Title.Parent = LeftSidebar
-Title.Text = "Mozer Chess ♟️"
-Title.Size = UDim2.new(1, 0, 0, 50)
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
-Title.BackgroundTransparency = 1
-
 RightContent.Parent = MainFrame
-RightContent.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-RightContent.Position = UDim2.new(0, 145, 0, 10)
-RightContent.Size = UDim2.new(1, -155, 1, -20)
-Instance.new("UICorner", RightContent).CornerRadius = UDim.new(0, 12)
+RightContent.Position = UDim2.new(0, 160, 0, 10)
+RightContent.Size = UDim2.new(1, -170, 1, -20)
+RightContent.BackgroundTransparency = 1
 
--- Chess Board UI
+-- Timers UI
+local TimerFrame = Instance.new("Frame", LeftSidebar)
+TimerFrame.Size = UDim2.new(1, -20, 0, 80)
+TimerFrame.Position = UDim2.new(0, 10, 0, 60)
+TimerFrame.BackgroundTransparency = 1
+
+local WTimerLabel = Instance.new("TextLabel", TimerFrame)
+WTimerLabel.Size = UDim2.new(1, 0, 0.4, 0)
+WTimerLabel.Text = "⚪ White: 10:00"
+WTimerLabel.TextColor3 = Color3.new(1,1,1)
+WTimerLabel.Font = Enum.Font.GothamBold
+
+local BTimerLabel = Instance.new("TextLabel", TimerFrame)
+BTimerLabel.Size = UDim2.new(1, 0, 0.4, 0)
+BTimerLabel.Position = UDim2.new(0, 0, 0.5, 0)
+BTimerLabel.Text = "⚫ Black: 10:00"
+BTimerLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+BTimerLabel.Font = Enum.Font.GothamBold
+
+-- Board UI
 local BoardFrame = Instance.new("Frame", RightContent)
-BoardFrame.Size = UDim2.new(0, 300, 0, 300)
-BoardFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
-BoardFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Instance.new("UIGridLayout", BoardFrame).CellSize = UDim2.new(0, 37, 0, 37)
-BoardFrame.UIGridLayout.Spacing = UDim2.new(0,0,0,0)
+BoardFrame.Size = UDim2.new(0, 320, 0, 320)
+BoardFrame.Position = UDim2.new(0.5, -160, 0.5, -160)
+local Grid = Instance.new("UIGridLayout", BoardFrame)
+Grid.CellSize = UDim2.new(0, 40, 0, 40)
+Grid.Spacing = UDim2.new(0,0,0,0)
 
 -- Piece Icons
 local Icons = {
@@ -61,39 +73,26 @@ local Icons = {
 }
 
 -- Create Squares
-local Squares = {}
-for row = 1, 8 do
-	Squares[row] = {}
-	for col = 1, 8 do
+for r = 1, 8 do
+	Squares[r] = {}
+	for c = 1, 8 do
 		local sq = Instance.new("TextButton", BoardFrame)
-		sq.Name = row .. "_" .. col
-		sq.Text = ""
-		sq.TextSize = 25
-		sq.Font = Enum.Font.GothamBold
-		sq.BackgroundColor3 = (row + col) % 2 == 0 and Color3.fromRGB(235, 235, 208) or Color3.fromRGB(119, 149, 86)
-		Squares[row][col] = sq
+		sq.TextSize = 30
+		sq.BackgroundColor3 = (r+c)%2==0 and Color3.fromRGB(240, 217, 181) or Color3.fromRGB(181, 136, 99)
+		Squares[r][c] = sq
 	end
 end
 
--- Game Logic Functions
+-- Rules Logic
 local function GetPiece(r, c) return Board[r] and Board[r][c] end
 
 local function GetValidMoves(r, c)
-	local piece = GetPiece(r, c)
-	if not piece then return {} end
+	local p = GetPiece(r, c)
+	if not p then return {} end
 	local moves = {}
-	local type = piece.Type
-	local color = piece.Color
+	local color = p.Color
 	
-	local directions = {
-		R = {{1,0}, {-1,0}, {0,1}, {0,-1}},
-		B = {{1,1}, {1,-1}, {-1,1}, {-1,-1}},
-		N = {{2,1}, {2,-1}, {-2,1}, {-2,-1}, {1,2}, {1,-2}, {-1,2}, {-1,-2}},
-		K = {{1,0}, {-1,0}, {0,1}, {0,-1}, {1,1}, {1,-1}, {-1,1}, {-1,-1}}
-	}
-	directions.Q = {{1,0}, {-1,0}, {0,1}, {0,-1}, {1,1}, {1,-1}, {-1,1}, {-1,-1}}
-
-	if type == "P" then
+	if p.Type == "P" then -- البيدق
 		local dir = (color == "White") and -1 or 1
 		if not GetPiece(r+dir, c) then 
 			table.insert(moves, {r+dir, c})
@@ -101,155 +100,165 @@ local function GetValidMoves(r, c)
 				table.insert(moves, {r+2*dir, c})
 			end
 		end
-		-- Captures
 		for _, dc in pairs({-1, 1}) do
 			local target = GetPiece(r+dir, c+dc)
 			if target and target.Color ~= color then table.insert(moves, {r+dir, c+dc}) end
 		end
-	elseif directions[type] then
-		for _, d in pairs(directions[type]) do
+	elseif p.Type == "N" then -- الحصان حرف L
+		local nMoves = {{2,1},{2,-1},{-2,1},{-2,-1},{1,2},{1,-2},{-1,2},{-1,-2}}
+		for _, m in pairs(nMoves) do
+			local nr, nc = r+m[1], c+m[2]
+			if nr>=1 and nr<=8 and nc>=1 and nc<=8 then
+				local target = GetPiece(nr, nc)
+				if not target or target.Color ~= color then table.insert(moves, {nr, nc}) end
+			end
+		end
+	-- (باقي الحركات للوزير والقلعة والفيل مدمجة هنا)
+	elseif p.Type == "R" or p.Type == "B" or p.Type == "Q" or p.Type == "K" then
+		local dirs = {}
+		if p.Type == "R" or p.Type == "Q" then table.insert(dirs, {1,0}); table.insert(dirs, {-1,0}); table.insert(dirs, {0,1}); table.insert(dirs, {0,-1}) end
+		if p.Type == "B" or p.Type == "Q" then table.insert(dirs, {1,1}); table.insert(dirs, {1,-1}); table.insert(dirs, {-1,1}); table.insert(dirs, {-1,-1}) end
+		if p.Type == "K" then dirs = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}} end
+		
+		for _, d in pairs(dirs) do
 			for i = 1, 8 do
-				local nr, nc = r + d[1]*i, c + d[2]*i
+				local nr, nc = r+d[1]*i, c+d[2]*i
 				if nr<1 or nr>8 or nc<1 or nc>8 then break end
 				local target = GetPiece(nr, nc)
 				if not target then table.insert(moves, {nr, nc})
-				elseif target.Color ~= color then table.insert(moves, {nr, nc}) break
+				elseif target.Color ~= color then table.insert(moves, {nr, nc}); break
 				else break end
-				if type == "N" or type == "K" then break end
+				if p.Type == "K" then break end
 			end
 		end
 	end
 	return moves
 end
 
-local function UpdateBoardUI()
-	for r=1,8 do for c=1,8 do
-		local p = Board[r][c]
-		Squares[r][c].Text = p and Icons[p.Color][p.Type] or ""
-		Squares[r][c].TextColor3 = p and (p.Color == "White" and Color3.new(1,1,1) or Color3.new(0,0,0)) or Color3.new(1,1,1)
-		-- Reset square color
-		Squares[r][c].BackgroundColor3 = (r + c) % 2 == 0 and Color3.fromRGB(235, 235, 208) or Color3.fromRGB(119, 149, 86)
-	end end
-end
-
-local function HighlightMoves(moves)
-	for _, m in pairs(moves) do
-		Squares[m[1]][m[2]].BackgroundColor3 = Color3.fromRGB(247, 247, 105) -- اصفر شفاف للتلميح
-	end
-end
-
--- AI Move (Simple Random/Greedy)
-local function AIMove()
+-- Smart AI Logic
+local function SmartAIMove()
 	if not GameActive or Turn == PlayerColor then return end
-	task.wait(1)
 	local aiColor = (PlayerColor == "White") and "Black" or "White"
-	local allMoves = {}
+	local bestMove = nil
+	local maxScore = -9999
+	
 	for r=1,8 do for c=1,8 do
 		local p = Board[r][c]
 		if p and p.Color == aiColor then
 			local moves = GetValidMoves(r, c)
-			for _, m in pairs(moves) do table.insert(allMoves, {from={r,c}, to=m}) end
+			for _, m in pairs(moves) do
+				local score = 0
+				local target = Board[m[1]][m[2]]
+				if target then score = Values[target.Type] end -- أكل قطعة
+				
+				if score > maxScore then
+					maxScore = score
+					bestMove = {from={r,c}, to=m}
+				end
+			end
 		end
 	end end
 	
-	if #allMoves > 0 then
-		local move = allMoves[math.random(#allMoves)]
-		local target = Board[move.to[1]][move.to[2]]
-		if target and target.Type == "K" then GameActive = false end
-		Board[move.to[1]][move.to[2]] = Board[move.from[1]][move.from[2]]
-		Board[move.from[1]][move.from[2]] = nil
+	if bestMove then
+		task.wait(1.5)
+		local from = bestMove.from
+		local to = bestMove.to
+		Board[to[1]][to[2]] = Board[from[1]][from[2]]
+		Board[from[1]][from[2]] = nil
 		Turn = PlayerColor
-		UpdateBoardUI()
+		UpdateUI()
 	end
 end
 
--- Square Click Event
+function UpdateUI()
+	for r=1,8 do for c=1,8 do
+		local p = Board[r][c]
+		Squares[r][c].Text = p and Icons[p.Color][p.Type] or ""
+		Squares[r][c].TextColor3 = (p and p.Color == "White") and Color3.new(1,1,1) or Color3.new(0,0,0)
+		Squares[r][c].BackgroundColor3 = (r+c)%2==0 and Color3.fromRGB(240, 217, 181) or Color3.fromRGB(181, 136, 99)
+	end end
+end
+
+-- Handle Click
 for r=1,8 do for c=1,8 do
 	Squares[r][c].MouseButton1Click:Connect(function()
 		if not GameActive or Turn ~= PlayerColor then return end
 		
-		local piece = Board[r][c]
-		-- Move piece
-		local isMove = false
-		for _, m in pairs(ValidMoves) do
-			if m[1] == r and m[2] == c then
-				local target = Board[r][c]
-				if target and target.Type == "K" then GameActive = false end
-				Board[r][c] = Board[SelectedSquare.r][SelectedSquare.c]
-				Board[SelectedSquare.r][SelectedSquare.c] = nil
-				Turn = (PlayerColor == "White") and "Black" or "White"
-				isMove = true
-				break
+		if SelectedSquare then
+			local moves = GetValidMoves(SelectedSquare.r, SelectedSquare.c)
+			local moveMade = false
+			for _, m in pairs(moves) do
+				if m[1] == r and m[2] == c then
+					Board[r][c] = Board[SelectedSquare.r][SelectedSquare.c]
+					Board[SelectedSquare.r][SelectedSquare.c] = nil
+					Turn = (PlayerColor == "White") and "Black" or "White"
+					moveMade = true
+					break
+				end
 			end
-		end
-		
-		if isMove then
 			SelectedSquare = nil
-			ValidMoves = {}
-			UpdateBoardUI()
-			AIMove()
+			UpdateUI()
+			if moveMade then SmartAIMove() end
 		else
-			if piece and piece.Color == PlayerColor then
-				UpdateBoardUI()
+			local p = Board[r][c]
+			if p and p.Color == PlayerColor then
 				SelectedSquare = {r=r, c=c}
-				ValidMoves = GetValidMoves(r, c)
-				HighlightMoves(ValidMoves)
-			else
-				-- Warning for illegal move
-				local originalColor = Squares[r][c].BackgroundColor3
-				Squares[r][c].BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-				task.delay(0.5, function() Squares[r][c].BackgroundColor3 = originalColor end)
+				local moves = GetValidMoves(r, c)
+				for _, m in pairs(moves) do
+					Squares[m[1]][m[2]].BackgroundColor3 = Color3.fromRGB(255, 255, 150) -- تلميح أصفر
+				end
 			end
 		end
 	end)
 end end
 
--- Start Game Function
-local function ResetGame(color)
+-- Timers Loop
+task.spawn(function()
+	while true do
+		task.wait(1)
+		if GameActive then
+			if Turn == "White" then
+				WhiteTime = math.max(0, WhiteTime - 1)
+				WTimerLabel.Text = string.format("⚪ White: %02d:%02d", math.floor(WhiteTime/60), WhiteTime%60)
+			else
+				BlackTime = math.max(0, BlackTime - 1)
+				BTimerLabel.Text = string.format("⚫ Black: %02d:%02d", math.floor(BlackTime/60), BlackTime%60)
+			end
+			if WhiteTime == 0 or BlackTime == 0 then GameActive = false end
+		end
+	end
+end)
+
+-- Controls
+local function Start(color)
 	PlayerColor = color
-	Turn = "White"
-	GameActive = true
 	Board = {}
 	for r=1,8 do Board[r] = {} end
-	
-	local layout = {"R", "N", "B", "Q", "K", "B", "N", "R"}
+	local l = {"R","N","B","Q","K","B","N","R"}
 	for i=1,8 do
-		Board[1][i] = {Type=layout[i], Color="Black"}
-		Board[2][i] = {Type="P", Color="Black"}
-		Board[7][i] = {Type="P", Color="White"}
-		Board[8][i] = {Type=layout[i], Color="White"}
+		Board[1][i]={Type=l[i],Color="Black"}; Board[2][i]={Type="P",Color="Black"}
+		Board[7][i]={Type="P",Color="White"}; Board[8][i]={Type=l[i],Color="White"}
 	end
-	UpdateBoardUI()
-	if PlayerColor == "Black" then AIMove() end
+	WhiteTime, BlackTime = 600, 600
+	Turn = "White"
+	GameActive = true
+	UpdateUI()
+	if PlayerColor == "Black" then SmartAIMove() end
 end
 
--- UI Controls
-local Controls = Instance.new("Frame", LeftSidebar)
-Controls.Size = UDim2.new(1, -20, 0, 150)
-Controls.Position = UDim2.new(0, 10, 0, 60)
-Controls.BackgroundTransparency = 1
-Instance.new("UIListLayout", Controls).Padding = UDim.new(0, 10)
+local WBtn = Instance.new("TextButton", LeftSidebar)
+WBtn.Size = UDim2.new(1,-20,0,35); WBtn.Position = UDim2.new(0,10,0,160); WBtn.Text = "العب بالأبيض ⚪"
+WBtn.BackgroundColor3 = Color3.fromRGB(60,60,60); WBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", WBtn)
+WBtn.MouseButton1Click:Connect(function() Start("White") end)
 
-local function CreateBtn(text, color)
-	local b = Instance.new("TextButton", Controls)
-	b.Size = UDim2.new(1, 0, 0, 35)
-	b.Text = text
-	b.BackgroundColor3 = color
-	b.TextColor3 = Color3.new(1,1,1)
-	b.Font = Enum.Font.GothamBold
-	Instance.new("UICorner", b)
-	return b
-end
+local BBtn = Instance.new("TextButton", LeftSidebar)
+BBtn.Size = UDim2.new(1,-20,0,35); BBtn.Position = UDim2.new(0,10,0,200); BBtn.Text = "العب بالأسود ⚫"
+BBtn.BackgroundColor3 = Color3.fromRGB(10,10,10); BBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", BBtn)
+BBtn.MouseButton1Click:Connect(function() Start("Black") end)
 
-local WhiteBtn = CreateBtn("العب بالأبيض ⚪", Color3.fromRGB(50, 50, 50))
-local BlackBtn = CreateBtn("العب بالأسود ⚫", Color3.fromRGB(0, 0, 0))
-local ResetBtn = CreateBtn("إعادة المباراة 🔄", Color3.fromRGB(150, 50, 50))
-
-WhiteBtn.MouseButton1Click:Connect(function() ResetGame("White") end)
-BlackBtn.MouseButton1Click:Connect(function() ResetGame("Black") end)
-ResetBtn.MouseButton1Click:Connect(function() ResetGame(PlayerColor) end)
-
--- Draggable Logic (From previous version)
+-- Draggable
 local function drag(f)
 	local s, start, startP
 	f.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then s = true start = i.Position startP = f.Position end end)
@@ -260,11 +269,3 @@ local function drag(f)
 	f.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then s = false end end)
 end
 drag(MainFrame)
-
-CloseBtn.Parent = MainFrame
-CloseBtn.Text = "X"
-CloseBtn.Size = UDim2.new(0,30,0,30)
-CloseBtn.Position = UDim2.new(1,-35,0,5)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.TextColor3 = Color3.fromRGB(255,0,0)
-CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
