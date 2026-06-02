@@ -1,8 +1,10 @@
--- MozerHub v2.3 - Blackjack Pro (Side Scores & UI Fix)
+-- MozerHub v2.4 - Blackjack Pro (Minimize System & Side Scores)
+local UserInputService = game:GetService("UserInputService")
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local LeftSidebar = Instance.new("Frame")
 local RightContent = Instance.new("Frame")
+local MinimizedFrame = Instance.new("TextButton")
 local Title = Instance.new("TextLabel")
 local CloseBtn = Instance.new("TextButton")
 
@@ -16,18 +18,33 @@ local names = {[1]="آس",[11]="عجوز👴",[12]="أميرة👸",[13]="ملك
 local GameActive = false
 
 -- UI Setup
-ScreenGui.Name = "MozerBlackjack_Final"
+ScreenGui.Name = "MozerBlackjack_V2.4"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
+-- الواجهة الرئيسية
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.Size = UDim2.new(0, 500, 0, 320)
 MainFrame.Position = UDim2.new(0.5, -250, 0.5, -160)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
 
--- Sidebar (Left)
+-- الزر الصغير (عند التصغير)
+MinimizedFrame.Name = "MinimizedFrame"
+MinimizedFrame.Parent = ScreenGui
+MinimizedFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MinimizedFrame.Size = UDim2.new(0, 55, 0, 55)
+MinimizedFrame.Position = UDim2.new(0.1, 0, 0.5, 0)
+MinimizedFrame.Visible = false
+MinimizedFrame.Text = "🃏"
+MinimizedFrame.TextSize = 35
+MinimizedFrame.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", MinimizedFrame).CornerRadius = UDim.new(0, 12)
+
+-- Sidebar (القائمة اليسرى للنقاط)
 LeftSidebar.Parent = MainFrame
 LeftSidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 LeftSidebar.Size = UDim2.new(0, 130, 1, 0)
@@ -35,39 +52,39 @@ Instance.new("UICorner", LeftSidebar).CornerRadius = UDim.new(0, 15)
 
 Title.Parent = LeftSidebar
 Title.Text = "Be Mozer 🃏"
-Title.Size = UDim2.new(1, 0, 0, 45)
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
+Title.TextSize = 16
 Title.BackgroundTransparency = 1
 
--- وضع النقاط في الجانب (Sidebar)
-local SideScoreFrame = Instance.new("Frame", LeftSidebar)
-SideScoreFrame.Size = UDim2.new(1, 0, 0, 100)
-SideScoreFrame.Position = UDim2.new(0, 0, 0, 50)
-SideScoreFrame.BackgroundTransparency = 1
+-- عرض النقاط في الجانب
+local ScoreContainer = Instance.new("Frame", LeftSidebar)
+ScoreContainer.Size = UDim2.new(1, 0, 0, 100)
+ScoreContainer.Position = UDim2.new(0, 0, 0, 50)
+ScoreContainer.BackgroundTransparency = 1
 
-local PlayerScoreSide = Instance.new("TextLabel", SideScoreFrame)
-PlayerScoreSide.Size = UDim2.new(1, 0, 0, 30)
-PlayerScoreSide.Position = UDim2.new(0, 10, 0, 0)
-PlayerScoreSide.Text = "نقاطك: 0"
-PlayerScoreSide.TextColor3 = Color3.fromRGB(100, 255, 100)
-PlayerScoreSide.Font = Enum.Font.GothamBold
-PlayerScoreSide.TextSize = 14
-PlayerScoreSide.TextXAlignment = Enum.TextXAlignment.Left
-PlayerScoreSide.BackgroundTransparency = 1
+local PlayerScoreLabel = Instance.new("TextLabel", ScoreContainer)
+PlayerScoreLabel.Size = UDim2.new(1, -10, 0, 30)
+PlayerScoreLabel.Position = UDim2.new(0, 10, 0, 0)
+PlayerScoreLabel.Text = "نقاطك: 0"
+PlayerScoreLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+PlayerScoreLabel.Font = Enum.Font.GothamBold
+PlayerScoreLabel.TextSize = 14
+PlayerScoreLabel.TextXAlignment = Enum.TextXAlignment.Left
+PlayerScoreLabel.BackgroundTransparency = 1
 
-local DealerScoreSide = Instance.new("TextLabel", SideScoreFrame)
-DealerScoreSide.Size = UDim2.new(1, 0, 0, 30)
-DealerScoreSide.Position = UDim2.new(0, 10, 0, 35)
-DealerScoreSide.Text = "الموزع: 0"
-DealerScoreSide.TextColor3 = Color3.fromRGB(255, 100, 100)
-DealerScoreSide.Font = Enum.Font.GothamBold
-DealerScoreSide.TextSize = 14
-DealerScoreSide.TextXAlignment = Enum.TextXAlignment.Left
-DealerScoreSide.BackgroundTransparency = 1
+local DealerScoreLabel = Instance.new("TextLabel", ScoreContainer)
+DealerScoreLabel.Size = UDim2.new(1, -10, 0, 30)
+DealerScoreLabel.Position = UDim2.new(0, 10, 0, 35)
+DealerScoreLabel.Text = "الموزع: 0"
+DealerScoreLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+DealerScoreLabel.Font = Enum.Font.GothamBold
+DealerScoreLabel.TextSize = 14
+DealerScoreLabel.TextXAlignment = Enum.TextXAlignment.Left
+DealerScoreLabel.BackgroundTransparency = 1
 
--- Right Content
+-- محتوى اللعبة (اليمين)
 RightContent.Parent = MainFrame
 RightContent.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
 RightContent.Position = UDim2.new(0, 135, 0, 10)
@@ -80,7 +97,7 @@ Header.Position = UDim2.new(0, 5, 0, 5)
 Header.BackgroundTransparency = 1
 
 local BalanceLabel = Instance.new("TextLabel", Header)
-BalanceLabel.Size = UDim2.new(0.7, 0, 1, 0)
+BalanceLabel.Size = UDim2.new(0.6, 0, 1, 0)
 BalanceLabel.Text = "💰: " .. Balance
 BalanceLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 BalanceLabel.Font = Enum.Font.GothamBold
@@ -97,7 +114,7 @@ ResearchBtn.TextColor3 = Color3.new(1,1,1)
 ResearchBtn.TextSize = 10
 Instance.new("UICorner", ResearchBtn)
 
--- Card Area
+-- منطقة الكروت
 local CardContainer = Instance.new("Frame", RightContent)
 CardContainer.Size = UDim2.new(1, -10, 0, 170)
 CardContainer.Position = UDim2.new(0, 5, 0, 40)
@@ -106,34 +123,31 @@ CardContainer.BackgroundTransparency = 1
 local DealerCards = Instance.new("Frame", CardContainer)
 DealerCards.Size = UDim2.new(1, 0, 0.45, 0)
 DealerCards.BackgroundTransparency = 1
-local DLayout = Instance.new("UIListLayout", DealerCards)
-DLayout.FillDirection = Enum.FillDirection.Horizontal
-DLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-DLayout.Padding = UDim.new(0, 5)
+Instance.new("UIListLayout", DealerCards).FillDirection = Enum.FillDirection.Horizontal
+DealerCards.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+DealerCards.UIListLayout.Padding = UDim.new(0, 5)
 
 local PlayerCards = Instance.new("Frame", CardContainer)
 PlayerCards.Size = UDim2.new(1, 0, 0.45, 0)
 PlayerCards.Position = UDim2.new(0, 0, 0.55, 0)
 PlayerCards.BackgroundTransparency = 1
-local PLayout = Instance.new("UIListLayout", PlayerCards)
-PLayout.FillDirection = Enum.FillDirection.Horizontal
-PLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-PLayout.Padding = UDim.new(0, 5)
+Instance.new("UIListLayout", PlayerCards).FillDirection = Enum.FillDirection.Horizontal
+PlayerCards.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+PlayerCards.UIListLayout.Padding = UDim.new(0, 5)
 
--- Small Bet Buttons
+-- أزرار الكوينز (تصغير)
 local BetScroll = Instance.new("ScrollingFrame", RightContent)
-BetScroll.Size = UDim2.new(1, -10, 0, 40)
-BetScroll.Position = UDim2.new(0, 5, 1, -85)
+BetScroll.Size = UDim2.new(1, -10, 0, 35)
+BetScroll.Position = UDim2.new(0, 5, 1, -80)
 BetScroll.CanvasSize = UDim2.new(2, 0, 0, 0)
 BetScroll.BackgroundTransparency = 1
 BetScroll.ScrollBarThickness = 0
-local BetLayout = Instance.new("UIListLayout", BetScroll)
-BetLayout.FillDirection = Enum.FillDirection.Horizontal
-BetLayout.Padding = UDim.new(0, 4)
+Instance.new("UIListLayout", BetScroll).FillDirection = Enum.FillDirection.Horizontal
+BetScroll.UIListLayout.Padding = UDim.new(0, 4)
 
 local function CreateBetBtn(amt)
 	local b = Instance.new("TextButton", BetScroll)
-	b.Size = UDim2.new(0, 40, 0, 30)
+	b.Size = UDim2.new(0, 40, 1, 0)
 	b.Text = amt
 	b.TextSize = 10
 	b.BackgroundColor3 = Color3.fromRGB(30, 50, 30)
@@ -143,10 +157,9 @@ local function CreateBetBtn(amt)
 		if not GameActive then CurrentBet = amt BalanceLabel.Text = "💰: "..Balance.." | الرهان: "..amt end
 	end)
 end
-local amounts = {10, 50, 100, 500, 1000, 2000, 5000, 10000}
-for _, a in pairs(amounts) do CreateBetBtn(a) end
+for _, a in pairs({10, 50, 100, 500, 1000, 2000, 5000, 10000}) do CreateBetBtn(a) end
 
--- Game Logic
+-- وظائف اللعبة
 local function GetScore(hand)
 	local s, aces = 0, 0
 	for _, c in pairs(hand) do
@@ -160,19 +173,19 @@ local function GetScore(hand)
 end
 
 local function UpdateScores(showDealer)
-	PlayerScoreSide.Text = "نقاطك: " .. GetScore(PlayerHand)
+	PlayerScoreLabel.Text = "نقاطك: " .. GetScore(PlayerHand)
 	if showDealer then
-		DealerScoreSide.Text = "الموزع: " .. GetScore(DealerHand)
+		DealerScoreLabel.Text = "الموزع: " .. GetScore(DealerHand)
 	else
 		local fv = DealerHand[1].Num
 		if fv > 10 then fv = 10 elseif fv == 1 then fv = 11 end
-		DealerScoreSide.Text = "الموزع: " .. fv .. " + ?"
+		DealerScoreLabel.Text = "الموزع: " .. fv .. " + ?"
 	end
 end
 
 local function CreateCard(card, parent, isHidden)
 	local c = Instance.new("Frame", parent)
-	c.Size = UDim2.new(0, 50, 0, 75)
+	c.Size = UDim2.new(0, 45, 0, 70)
 	c.BackgroundColor3 = isHidden and Color3.fromRGB(45, 45, 45) or Color3.fromRGB(255, 255, 255)
 	Instance.new("UICorner", c).CornerRadius = UDim.new(0, 8)
 	
@@ -180,21 +193,21 @@ local function CreateCard(card, parent, isHidden)
 		local t = Instance.new("TextLabel", c)
 		t.Size = UDim2.new(1, 0, 1, 0)
 		t.Text = card.Suit .. "\n" .. (names[card.Num] or card.Num)
-		t.TextSize = 16 -- تكبير المحتوى
+		t.TextSize = 15 -- تكبير محتوى الورقة قليلاً
 		t.Font = Enum.Font.GothamBold
 		t.TextColor3 = (card.Suit == "❤️" or card.Suit == "💎") and Color3.fromRGB(200, 0, 0) or Color3.fromRGB(0, 0, 0)
 		t.BackgroundTransparency = 1
 	else
 		local t = Instance.new("TextLabel", c)
 		t.Size = UDim2.new(1, 0, 1, 0)
-		t.Text = "🃏"
-		t.TextSize = 22
+		t.Text = "❓"
+		t.TextSize = 20
 		t.TextColor3 = Color3.new(1,1,1)
 		t.BackgroundTransparency = 1
 	end
 end
 
--- Controls
+-- أزرار التحكم
 local Controls = Instance.new("Frame", RightContent)
 Controls.Size = UDim2.new(1, -10, 0, 35)
 Controls.Position = UDim2.new(0, 5, 1, -40)
@@ -224,6 +237,7 @@ StandBtn.Visible = false
 StandBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 Instance.new("UICorner", StandBtn)
 
+-- أحداث اللعب
 MainAction.MouseButton1Click:Connect(function()
 	if CurrentBet > 0 and Balance >= CurrentBet then
 		GameActive = true
@@ -233,26 +247,19 @@ MainAction.MouseButton1Click:Connect(function()
 		for _, v in pairs(PlayerCards:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
 		for _, v in pairs(DealerCards:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
 		for _, c in pairs(PlayerHand) do CreateCard(c, PlayerCards) end
-		CreateCard(DealerHand[1], DealerCards)
-		CreateCard({}, DealerCards, true)
+		CreateCard(DealerHand[1], DealerCards); CreateCard({}, DealerCards, true)
 		UpdateScores(false)
-		MainAction.Visible = false
-		HitBtn.Visible = true
-		StandBtn.Visible = true
+		MainAction.Visible = false; HitBtn.Visible = true; StandBtn.Visible = true
 		BalanceLabel.Text = "💰: " .. Balance
 	end
 end)
 
 HitBtn.MouseButton1Click:Connect(function()
 	local c = {Num=math.random(1,13), Suit=suits[math.random(1,4)]}
-	table.insert(PlayerHand, c)
-	CreateCard(c, PlayerCards)
-	UpdateScores(false)
+	table.insert(PlayerHand, c); CreateCard(c, PlayerCards); UpdateScores(false)
 	if GetScore(PlayerHand) > 21 then
-		GameActive = false
-		HitBtn.Visible = false; StandBtn.Visible = false; MainAction.Visible = true
-		MainAction.Text = "خسرت! جولة جديدة؟"
-		UpdateScores(true)
+		GameActive = false; HitBtn.Visible = false; StandBtn.Visible = false; MainAction.Visible = true
+		MainAction.Text = "خسرت! جولة جديدة؟"; UpdateScores(true)
 	end
 end)
 
@@ -263,34 +270,50 @@ StandBtn.MouseButton1Click:Connect(function()
 	while GetScore(DealerHand) < 17 do
 		task.wait(0.5)
 		local c = {Num=math.random(1,13), Suit=suits[math.random(1,4)]}
-		table.insert(DealerHand, c)
-		CreateCard(c, DealerCards)
-		UpdateScores(true)
+		table.insert(DealerHand, c); CreateCard(c, DealerCards); UpdateScores(true)
 	end
 	local ps, ds = GetScore(PlayerHand), GetScore(DealerHand)
 	if ds > 21 or ps > ds then Balance = Balance + (CurrentBet * 2); MainAction.Text = "فزت! 🎉 جولة جديدة؟"
 	elseif ps < ds then MainAction.Text = "خسرت! 💀 جولة جديدة؟"
 	else Balance = Balance + CurrentBet; MainAction.Text = "تعادل! جولة جديدة؟" end
-	GameActive = false; MainAction.Visible = true
-	BalanceLabel.Text = "💰: " .. Balance
-	UpdateScores(true)
+	GameActive = false; MainAction.Visible = true; BalanceLabel.Text = "💰: " .. Balance; UpdateScores(true)
 end)
 
 ResearchBtn.MouseButton1Click:Connect(function()
-	if not GameActive then Balance = 1000; BalanceLabel.Text = "💰: " .. Balance; PlayerScoreSide.Text = "نقاطك: 0"; DealerScoreSide.Text = "الموزع: 0" end
+	if not GameActive then Balance = 1000; BalanceLabel.Text = "💰: " .. Balance; PlayerScoreLabel.Text = "نقاطك: 0"; DealerScoreLabel.Text = "الموزع: 0" end
 end)
 
--- Draggable
-local function drag(f)
-	local s, start, startP
-	f.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then s = true start = i.Position startP = f.Position end end)
-	game:GetService("UserInputService").InputChanged:Connect(function(i) if s and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-		local d = i.Position - start
-		f.Position = UDim2.new(startP.X.Scale, startP.X.Offset + d.X, startP.Y.Scale, startP.Y.Offset + d.Y)
-	end end)
-	f.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then s = false end end)
+-- وظيفة التصغير والتحريك (Draggable)
+local function MakeDraggable(frame)
+	local dragging, dragStart, startPos
+	frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true; dragStart = input.Position; startPos = frame.Position
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+	end)
 end
-drag(MainFrame)
+
+MakeDraggable(MainFrame)
+MakeDraggable(MinimizedFrame)
+
 CloseBtn.Parent = MainFrame
 CloseBtn.Text = "X"; CloseBtn.Size = UDim2.new(0,30,0,30); CloseBtn.Position = UDim2.new(1,-35,0,5); CloseBtn.BackgroundTransparency = 1; CloseBtn.TextColor3 = Color3.new(1,0,0)
-CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+	MainFrame.Visible = false
+	MinimizedFrame.Visible = true
+end)
+
+MinimizedFrame.MouseButton1Click:Connect(function()
+	MainFrame.Visible = true
+	MinimizedFrame.Visible = false
+end)
