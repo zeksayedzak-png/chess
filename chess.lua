@@ -1,11 +1,11 @@
--- MozerHub V6 - The Original Chess Experience
+-- MozerHub V7 - Final Mobile Optimized Chess
+local UserInputService = game:GetService("UserInputService")
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
-local BoardArea = Instance.new("Frame")
 local LeftSidebar = Instance.new("Frame")
-local StatusLabel = Instance.new("TextLabel")
+local BoardArea = Instance.new("Frame")
 
--- Settings
+-- Game State
 local Board = {}
 local Squares = {}
 local SelectedSquare = nil
@@ -13,74 +13,63 @@ local Turn = "White"
 local PlayerColor = "White"
 local GameActive = false
 
--- Color Palette (Chess.com Style)
+-- Theme (Chess.com)
 local LightSq = Color3.fromRGB(235, 236, 208)
 local DarkSq = Color3.fromRGB(119, 149, 86)
-local HighlightColor = Color3.fromRGB(247, 247, 105)
+local HighlightColor = Color3.fromRGB(255, 255, 0)
 
--- UI Setup
-ScreenGui.Name = "MozerChess_Final"
+ScreenGui.Name = "MozerChessMobile"
 ScreenGui.Parent = game.CoreGui
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 
+-- Main Frame (تصغير الحجم ليتناسب مع الجوال)
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.Size = UDim2.new(0, 520, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -260, 0.5, -180)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Size = UDim2.new(0, 440, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -220, 0.5, -140)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
 -- Sidebar
 LeftSidebar.Parent = MainFrame
-LeftSidebar.Size = UDim2.new(0, 140, 1, 0)
-LeftSidebar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Instance.new("UICorner", LeftSidebar).CornerRadius = UDim.new(0, 15)
+LeftSidebar.Size = UDim2.new(0, 120, 1, 0)
+LeftSidebar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Instance.new("UICorner", LeftSidebar).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel", LeftSidebar)
 Title.Text = "MOZER CHESS"
-Title.Size = UDim2.new(1, 0, 0, 50)
-Title.TextColor3 = Color3.new(1,1,1)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.FredokaOne
-Title.TextSize = 20
+Title.TextSize = 16
 Title.BackgroundTransparency = 1
 
-StatusLabel.Parent = LeftSidebar
-StatusLabel.Size = UDim2.new(1, 0, 0, 30)
-StatusLabel.Position = UDim2.new(0, 0, 0, 50)
-StatusLabel.Text = "إختر لونك للبدء"
-StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-StatusLabel.Font = Enum.Font.GothamMedium
-StatusLabel.TextSize = 12
-StatusLabel.BackgroundTransparency = 1
-
--- Original Chess Board
+-- Board Area (توسيط الطاولة)
 BoardArea.Name = "Board"
 BoardArea.Parent = MainFrame
-BoardArea.Position = UDim2.new(0, 150, 0.5, -160)
-BoardArea.Size = UDim2.new(0, 320, 0, 320)
-BoardArea.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-BoardArea.BorderSizePixel = 2
+BoardArea.Position = UDim2.new(0, 130, 0, 10)
+BoardArea.Size = UDim2.new(0, 260, 0, 260)
+BoardArea.BackgroundTransparency = 1
 
 local Grid = Instance.new("UIGridLayout", BoardArea)
-Grid.CellSize = UDim2.new(0, 40, 0, 40)
+Grid.CellSize = UDim2.new(0, 32, 0, 32)
 Grid.Spacing = UDim2.new(0, 0, 0, 0)
 
--- Piece Icons (Solid & Visible)
+-- Icons
 local Icons = {
 	White = {P="♙", R="♖", N="♘", B="♗", Q="♕", K="♔"},
-	Black = {P="♟︎", R="♜", N="♞", B="♝", Q="♛", K="♚"}
+	Black = {P="♟", R="♜", N="♞", B="♝", Q="♛", K="♚"}
 }
 
--- Create Squares
+-- Create Board
 for r = 1, 8 do
 	Squares[r] = {}
 	for c = 1, 8 do
 		local sq = Instance.new("TextButton", BoardArea)
-		sq.Name = r .. "_" .. c
 		sq.Text = ""
-		sq.TextSize = 32 -- تكبير القطع لتكون واضحة
+		sq.TextSize = 24
 		sq.Font = Enum.Font.GothamBold
 		sq.BorderSizePixel = 0
 		sq.AutoButtonColor = false
@@ -89,7 +78,7 @@ for r = 1, 8 do
 	end
 end
 
--- Logic: Moves
+-- Logic functions
 local function GetPiece(r, c) return Board[r] and Board[r][c] end
 
 local function GetValidMoves(r, c)
@@ -97,15 +86,13 @@ local function GetValidMoves(r, c)
 	if not p then return {} end
 	local moves = {}
 	local color = p.Color
-	
-	local function check(nr, nc)
-		if nr<1 or nr>8 or nc<1 or nc>8 then return "out" end
+	local function add(nr, nc)
+		if nr<1 or nr>8 or nc<1 or nc>8 then return false end
 		local target = GetPiece(nr, nc)
-		if not target then table.insert(moves, {nr, nc}) return "empty" end
-		if target.Color ~= color then table.insert(moves, {nr, nc}) return "capture" end
-		return "block"
+		if not target then table.insert(moves, {nr, nc}) return true end
+		if target.Color ~= color then table.insert(moves, {nr, nc}) end
+		return false
 	end
-
 	if p.Type == "P" then
 		local d = (color == "White") and -1 or 1
 		if not GetPiece(r+d, c) then 
@@ -118,17 +105,14 @@ local function GetValidMoves(r, c)
 		end
 	elseif p.Type == "N" then
 		local m = {{2,1},{2,-1},{-2,1},{-2,-1},{1,2},{1,-2},{-1,2},{-1,-2}}
-		for _, v in pairs(m) do check(r+v[1], c+v[2]) end
-	elseif p.Type == "R" or p.Type == "B" or p.Type == "Q" or p.Type == "K" then
+		for _, v in pairs(m) do add(r+v[1], c+v[2]) end
+	else
 		local dirs = {}
 		if p.Type=="R" or p.Type=="Q" then table.insert(dirs,{1,0}); table.insert(dirs,{-1,0}); table.insert(dirs,{0,1}); table.insert(dirs,{0,-1}) end
 		if p.Type=="B" or p.Type=="Q" then table.insert(dirs,{1,1}); table.insert(dirs,{1,-1}); table.insert(dirs,{-1,1}); table.insert(dirs,{-1,-1}) end
 		if p.Type=="K" then dirs={{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}} end
 		for _, dr in pairs(dirs) do
-			for i=1, 8 do
-				local res = check(r+dr[1]*i, c+dr[2]*i)
-				if res ~= "empty" or p.Type=="K" then break end
-			end
+			for i=1, 8 do if not add(r+dr[1]*i, c+dr[2]*i) or p.Type=="K" then break end end
 		end
 	end
 	return moves
@@ -143,7 +127,6 @@ local function Render()
 	end end
 end
 
--- AI (Smart Thinking)
 local function AIMove()
 	if not GameActive or Turn == PlayerColor then return end
 	task.wait(1)
@@ -160,25 +143,22 @@ local function AIMove()
 		Board[move.t[1]][move.t[2]] = Board[move.f[1]][move.f[2]]
 		Board[move.f[1]][move.f[2]] = nil
 		Turn = PlayerColor
-		StatusLabel.Text = "دورك الآن"
 		Render()
 	end
 end
 
--- Interactions
 for r=1,8 do for c=1,8 do
 	Squares[r][c].MouseButton1Click:Connect(function()
 		if not GameActive or Turn ~= PlayerColor then return end
 		if SelectedSquare then
 			local valid = false
-			local moves = GetValidMoves(SelectedSquare.r, SelectedSquare.c)
-			for _, m in pairs(moves) do if m[1]==r and m[2]==c then valid=true break end end
-			
+			for _, m in pairs(GetValidMoves(SelectedSquare.r, SelectedSquare.c)) do
+				if m[1]==r and m[2]==c then valid=true break end
+			end
 			if valid then
 				Board[r][c] = Board[SelectedSquare.r][SelectedSquare.c]
 				Board[SelectedSquare.r][SelectedSquare.c] = nil
 				Turn = (PlayerColor=="White") and "Black" or "White"
-				StatusLabel.Text = "الكمبيوتر يفكر..."
 				SelectedSquare = nil
 				Render()
 				AIMove()
@@ -199,7 +179,6 @@ for r=1,8 do for c=1,8 do
 	end)
 end end
 
--- Start Game Function
 local function Start(col)
 	PlayerColor = col
 	Turn = "White"
@@ -211,7 +190,6 @@ local function Start(col)
 		Board[1][i]={Type=l[i],Color="Black"}; Board[2][i]={Type="P",Color="Black"}
 		Board[7][i]={Type="P",Color="White"}; Board[8][i]={Type=l[i],Color="White"}
 	end
-	StatusLabel.Text = (Turn==PlayerColor) and "دورك الآن" or "دور الكمبيوتر"
 	Render()
 	if PlayerColor == "Black" then AIMove() end
 end
@@ -219,37 +197,47 @@ end
 -- Sidebar Controls
 local function CreateBtn(txt, pos, color, func)
 	local b = Instance.new("TextButton", LeftSidebar)
-	b.Size = UDim2.new(1, -20, 0, 40)
+	b.Size = UDim2.new(1, -10, 0, 30)
 	b.Position = pos
 	b.Text = txt
 	b.BackgroundColor3 = color
 	b.TextColor3 = Color3.new(1,1,1)
 	b.Font = Enum.Font.GothamBold
+	b.TextSize = 10
 	Instance.new("UICorner", b)
 	b.MouseButton1Click:Connect(func)
 end
 
-CreateBtn("الأبيض ⚪", UDim2.new(0, 10, 0, 100), Color3.fromRGB(60, 60, 60), function() Start("White") end)
-CreateBtn("الأسود ⚫", UDim2.new(0, 10, 0, 150), Color3.fromRGB(15, 15, 15), function() Start("Black") end)
-CreateBtn("إعادة 🔄", UDim2.new(0, 10, 0, 200), Color3.fromRGB(180, 50, 50), function() Start(PlayerColor) end)
+CreateBtn("الأبيض ⚪", UDim2.new(0, 5, 0, 50), Color3.fromRGB(60,60,60), function() Start("White") end)
+CreateBtn("الأسود ⚫", UDim2.new(0, 5, 0, 90), Color3.fromRGB(15,15,15), function() Start("Black") end)
+CreateBtn("إعادة المباراة 🔄", UDim2.new(0, 5, 0, 130), Color3.fromRGB(150,50,50), function() Start(PlayerColor) end)
 
--- Close & Drag
+-- Smooth Draggable Logic (WORKS ON MOBILE DELTA)
+local dragging, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+-- Close
 local Close = Instance.new("TextButton", MainFrame)
 Close.Text = "X"
-Close.Size = UDim2.new(0, 35, 0, 35)
-Close.Position = UDim2.new(1, -40, 0, 5)
+Close.Size = UDim2.new(0, 25, 0, 25)
+Close.Position = UDim2.new(1, -30, 0, 5)
 Close.BackgroundTransparency = 1
-Close.TextColor3 = Color3.new(1,0,0)
-Close.TextSize = 20
+Close.TextColor3 = Color3.new(1, 0, 0)
 Close.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-
-local function drag(f)
-	local s, start, startP
-	f.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then s = true start = i.Position startP = f.Position end end)
-	game:GetService("UserInputService").InputChanged:Connect(function(i) if s and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-		local d = i.Position - start
-		f.Position = UDim2.new(startP.X.Scale, startP.X.Offset + d.X, startP.Y.Scale, startP.Y.Offset + d.Y)
-	end end)
-	f.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then s = false end end)
-end
-drag(MainFrame)
